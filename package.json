@@ -1,0 +1,11 @@
+{
+  "name": "ean-checker-vue",
+  "version": "1.0.0",
+  "description": "checador de ean",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Luccas Maia; Diego Lamarão",
+  "license": "ISC"
+}
