@@ -4,7 +4,7 @@ new Vue({
         return {
             beeping: false,
             selectedMarket: 0,
-            order: undefined,
+            order: '',
             notFound: false,
             newEan: '',
             message: '',
@@ -14,6 +14,19 @@ new Vue({
             endTime: '',
             finished: false,
             isSignedIn: false,
+            spreadsheet: ''
+        }
+    },
+
+    watch: {
+        order: async function (val) {
+            try {
+                if (this.beeping) {
+                    await this.updateSpreadSheet(val)
+                }
+            } catch (err) {
+                console.log(err)
+            }
         }
     },
 
@@ -40,6 +53,29 @@ new Vue({
                     title: title
                 }
             })
+        },
+
+        updateSpreadSheet (order) {
+            var rows = [
+                ['ean', 'descricao', 'quantidade', 'encontrado', 'mercado', 'trocado'],
+                ...order.map(product => [
+                    product.ean,
+                    product.descricao,
+                    product.quantidade,
+                    product.found || 0,
+                    product.market || '',
+                    product.eanChanged || false
+                ])
+              ]
+              var body = {
+                values: rows
+              }
+              return this.$GoogleAPI.api.client.sheets.spreadsheets.values.update({
+                 spreadsheetId: this.spreadsheet.spreadsheetId,
+                 range: 'A1',
+                 valueInputOption:'USER_ENTERED', 
+                 resource: body
+              })
         },
 
         startEditingEan () {
@@ -78,10 +114,17 @@ new Vue({
             }).fromString(result.split(';').join(','))
         },
 
-        checkInputs () {
+        async checkInputs () {
             if (this.order) {
-                this.beeping = true
-                this.startTime = Date.now()
+                try {
+                    const separador = prompt('Informe seu nome')
+                    const response = await this.createSpreadSheet(`pedidos-${separador}-${new Date().toLocaleString()}`)
+                    this.spreadsheet = response.result
+                    this.beeping = true
+                    this.startTime = Date.now()
+                } catch (error) {
+                    console.log(error)
+                }
             } else {
                 alert('Por favor informe o csv do pedido')
             }
@@ -142,44 +185,10 @@ new Vue({
                 this.message = 'O pedido está completo'
                 this.endTime = Date.now()
                 if (!this.finished) {
-                    this.exportResults()
+                    this.updateSpreadSheet(this.order)
                 }
                 this.finished = true
             }
         },
-
-        async exportResults () {
-            const { Parser } = window.json2csv
-            const fields = ['ean', 'descricao', 'quantidade', 'encontrado', 'mercado', 'trocado'];
-            const transformOpts = { encoding: 'utf-8' };
-            const order = this.order.map(product => {
-                return {
-                    ean: product.ean,
-                    descricao: product.descricao,
-                    quantidade: product.quantidade,
-                    encontrado: product.found || 0,
-                    mercado: product.market || '',
-                    trocado: product.eanChanged || false
-                }
-            })
-
-            const json2csvParser = new Parser({ fields });
-            const csv = json2csvParser.parse(order);
-            try {
-                const response = await this.createSpreadSheet('planilha teste')
-                console.log(response)
-            } catch (error) {
-                console.log(error)
-            }
-            // const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-            // const url = URL.createObjectURL(blob)
-            // const link = document.createElement("a")
-            // const filename = `exportação-pedido.csv`
-
-            // link.setAttribute("href", url)
-            // link.setAttribute("download", filename)
-            // link.textContent = 'Clique aqui para fazer o download da exportação'
-            // document.body.appendChild(link)
-        }
     }
 })
