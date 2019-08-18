@@ -12,14 +12,36 @@ new Vue({
             editingEan: false,
             startTime: '',
             endTime: '',
-            finished: false
+            finished: false,
+            isSignedIn: false,
         }
     },
 
     headers: ['ean','descricao', 'quantidade', 'encontrados', 'mercado'],
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
 
+    async mounted() {
+        await this.$GoogleAPI.ClientLoad()
+        this.$GoogleAPI.api.auth2.getAuthInstance().isSignedIn.listen((isSignedIn) => {
+            this.isSignedIn = isSignedIn
+        })
+        this.isSignedIn = this.$GoogleAPI.api.auth2.getAuthInstance().isSignedIn.get()
+
+        if (!this.isSignedIn) {
+            this.$GoogleAPI.api.auth2.getAuthInstance().signIn()
+        }
+
+    },
+
     methods: {
+        createSpreadSheet (title) {
+            return this.$GoogleAPI.api.client.sheets.spreadsheets.create({
+                properties: {
+                    title: title
+                }
+            })
+        },
+
         startEditingEan () {
             this.editingEan = true
             this.oldEan = ''
@@ -79,26 +101,26 @@ new Vue({
         },
 
         checkEanInOrder (ean) {
-            if (this.order.some(p => p.ean == ean)) { //.some -> para algum 
+            if (this.order.some(p => p.ean == ean)) { //.some -> para algum
                 const newOrder = []
                 this.order.forEach(product => { //.forEach -> para cada
                     const market = this.$options.markets[this.selectedMarket]
-    
+
                     if (`${product.ean}-${product.market || market}` == `${ean}-${market}`) {
                         this.message = `Produto "${product.descricao}" encontrado` //textContent -> Insere texto
                         if (!product.found) {
                             product.found = 0
                         }
                         if (product.quantidade > product.found) {
-    
+
                             if (!product.market) {
                                 product.market = market
                             }
                             product.found += 1
                             this.message += ` Falta(m) bipar ${Number(product.quantidade) - product.found} produto(s)`
-                        } else {                    
+                        } else {
                             this.message += ', quantidade completa, bipe o próximo produto'
-                        } 
+                        }
                     } else if (product.ean == ean && product.market !== market && !product.hasCopy) {
                         const productCopy = Object.assign({}, product)
                         product.hasCopy = true
@@ -108,14 +130,14 @@ new Vue({
                         productCopy.market = market
                         newOrder.push(productCopy)
                     }
-                    newOrder.push(product) //.append = .push 
+                    newOrder.push(product) //.append = .push
                 })
                 this.order = newOrder
             } else {
                 this.message = 'Produto NÃO existe no pedido, desaja alterar o EAN do produto no pedido?'
                 this.notFound = true
             }
-    
+
             if (this.order.every(p => p.quantidade == p.found)) {
                 this.message = 'O pedido está completo'
                 this.endTime = Date.now()
@@ -126,7 +148,7 @@ new Vue({
             }
         },
 
-        exportResults () {
+        async exportResults () {
             const { Parser } = window.json2csv
             const fields = ['ean', 'descricao', 'quantidade', 'encontrado', 'mercado', 'trocado'];
             const transformOpts = { encoding: 'utf-8' };
@@ -140,19 +162,24 @@ new Vue({
                     trocado: product.eanChanged || false
                 }
             })
-            
+
             const json2csvParser = new Parser({ fields });
             const csv = json2csvParser.parse(order);
+            try {
+                const response = await this.createSpreadSheet('planilha teste')
+                console.log(response)
+            } catch (error) {
+                console.log(error)
+            }
+            // const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            // const url = URL.createObjectURL(blob)
+            // const link = document.createElement("a")
+            // const filename = `exportação-pedido.csv`
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement("a")
-            const filename = `exportação-pedido.csv`
-
-            link.setAttribute("href", url)
-            link.setAttribute("download", filename)
-            link.textContent = 'Clique aqui para fazer o download da exportação'
-            document.body.appendChild(link)
+            // link.setAttribute("href", url)
+            // link.setAttribute("download", filename)
+            // link.textContent = 'Clique aqui para fazer o download da exportação'
+            // document.body.appendChild(link)
         }
     }
 })

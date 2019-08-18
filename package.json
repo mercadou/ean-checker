@@ -4,7 +4,7 @@
   "description": "checador de ean",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "author": "Luccas Maia; Diego Lamarão",
   "license": "ISC"
