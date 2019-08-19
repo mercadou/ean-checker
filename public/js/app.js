@@ -14,7 +14,8 @@ new Vue({
             endTime: '',
             finished: false,
             isSignedIn: false,
-            spreadsheet: ''
+            spreadsheet: '',
+            beepers: 0
         }
     },
 
@@ -132,7 +133,9 @@ new Vue({
 
         checkEanInput (event) {
             const eaninput = Number(event.target.value)
+            event.target.value = ''
             if (!Number.isNaN(eaninput) && eaninput !== 0) {
+                this.newEan = eaninput
                 this.checkEanInOrder(eaninput)
             } else {
                 alert('Por favor digite um EAN válido')

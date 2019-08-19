@@ -40,7 +40,7 @@
         </div>
         <div v-else>
             Checar EAN no pedido
-            <input v-model="newEan" @keyup.enter="checkEanInput" type="text">
+            <input @keyup.enter="checkEanInput" type="text">
             <br>
             <span v-if="!editingEan" v-text="message"></span>
             <button @click="startEditingEan" v-if="notFound && !editingEan">Sim</button>
