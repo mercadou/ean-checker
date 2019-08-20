@@ -19,7 +19,17 @@ const server = http.createServer((req, res) => {
                 res.writeHead(404)
                 res.end('Resource Not Found')
             }
-        } else {
+        } else if (req.url.includes('/css/')) {
+            try {
+                const file = fs.readFileSync(`./public${req.url}`)
+                res.writeHead(200, {'Content-Type': 'text/css' })
+                res.end(file, undefined)
+            } catch (error) {
+                console.log(error)
+                res.writeHead(404)
+                res.end('Resource Not Found')
+            }
+        }else {
             res.writeHead(404)
             res.end('Resource Not Found')
         }

@@ -15,24 +15,30 @@ new Vue({
             finished: false,
             isSignedIn: false,
             spreadsheet: '',
-            beepers: 0
+            beepers: 0,
+            addingSimilar: false,
+            similarDescription: ''
         }
     },
 
     watch: {
-        order: async function (val) {
-            try {
-                if (this.beeping) {
-                    await this.updateSpreadSheet(val)
+        beepers: async function (val) {
+            if (val >= this.$options.countBeeps) {
+                this.beepers = 0
+                try {
+                    if (this.beeping) {
+                        await this.updateSpreadSheet(this.order)
+                    }
+                } catch (err) {
+                    console.log(err)
                 }
-            } catch (err) {
-                console.log(err)
             }
         }
     },
 
     headers: ['ean','descricao', 'quantidade', 'encontrados', 'mercado'],
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
+    countBeeps: 10,
 
     async mounted() {
         await this.$GoogleAPI.ClientLoad()
@@ -58,14 +64,15 @@ new Vue({
 
         updateSpreadSheet (order) {
             var rows = [
-                ['ean', 'descricao', 'quantidade', 'encontrado', 'mercado', 'trocado'],
+                ['ean', 'descricao', 'quantidade', 'encontrado', 'mercado', 'trocado', 'similar de'],
                 ...order.map(product => [
                     product.ean,
                     product.descricao,
                     product.quantidade,
                     product.found || 0,
                     product.market || '',
-                    product.eanChanged || false
+                    product.eanChanged || false,
+                    product.similar || ''
                 ])
               ]
               var body = {
@@ -83,25 +90,59 @@ new Vue({
             this.editingEan = true
             this.oldEan = ''
         },
+        
+        addSimilar () {
+            this.addingSimilar = true
+            this.oldEan = ''
+        },
 
         changeProductEan () {
-            if (confirm(
-                `Deseja trocar o ean ${this.oldEan} pelo o ean ${this.newEan}`
-            )) {
-                this.order = this.order.map(product => {
-                    if (product.ean == this.oldEan) {
-                        if (!(product.found > 0)) {
-                            product.ean = this.newEan
-                            product.eanChanged = true
-                        } else {
-                            alert('ERRO: Esse produto não pode ser mais alterado!')
+            if (this.oldEan) {
+                if (confirm(
+                    `Deseja trocar o ean ${this.oldEan} pelo o ean ${this.newEan}`
+                )) {
+                    this.order = this.order.map(product => {
+                        if (product.ean == this.oldEan) {
+                            if (!(product.found > 0)) {
+                                product.ean = this.newEan
+                                product.eanChanged = true
+                            } else {
+                                alert('ERRO: Esse produto não pode ser mais alterado!')
+                            }
                         }
-                    }
-                    return product
-                })
-                this.editingEan = false
-                this.notFound = false
-                this.message = 'Ean alterado com sucesso, veja o resultado na tabela, bipe o próximo produto!'
+                        return product
+                    })
+                    this.editingEan = false
+                    this.notFound = false
+                    this.message = 'Ean alterado com sucesso, veja o resultado na tabela, bipe o próximo produto!'
+                }
+            } else {
+                alert('Por favor selecione um ean na tabela')
+            }
+        },
+
+        confirmSimilar () {
+            if (this.oldEan && this.similarDescription.length >= 10) {
+                const descricao = this.order.find(p => p.ean === this.oldEan).descricao
+                if (confirm(
+                    `Deseja adicionar o similar ${this.similarDescription} no lugar do produto ${descricao}`
+                )) {
+                    this.order = this.order.map(product => {
+                        if (product.ean == this.oldEan) {
+                            product.ean = this.newEan
+                            product.descricao = this.similarDescription
+                            product.similar = descricao
+                        }
+                        return product
+                    })
+                    this.addingSimilar = false
+                    this.notFound = false
+                    this.message = 'Produto similar adicionado com sucesso, veja o resultado na tabela, bipe o próximo produto!'
+                }
+            } else if (!this.oldEan) {
+                alert('Por favor selecione um ean na tabela')
+            } else {
+                alert('Por favor informa uma descrição válida (Mínimo de 10 caracteres)')
             }
         },
 
@@ -146,7 +187,7 @@ new Vue({
             this.oldEan = event.target.textContent
         },
 
-        checkEanInOrder (ean) {
+        async checkEanInOrder (ean) {
             if (this.order.some(p => p.ean == ean)) { //.some -> para algum
                 const newOrder = []
                 this.order.forEach(product => { //.forEach -> para cada
@@ -163,6 +204,7 @@ new Vue({
                                 product.market = market
                             }
                             product.found += 1
+                            this.beepers += 1
                             this.message += ` Falta(m) bipar ${Number(product.quantidade) - product.found} produto(s)`
                         } else {
                             this.message += ', quantidade completa, bipe o próximo produto'
@@ -173,6 +215,7 @@ new Vue({
                         productCopy.quantidade = product.quantidade - product.found
                         product.quantidade = product.found
                         productCopy.found = 1
+                        this.beepers += 1
                         productCopy.market = market
                         newOrder.push(productCopy)
                     }
@@ -180,7 +223,7 @@ new Vue({
                 })
                 this.order = newOrder
             } else {
-                this.message = 'Produto NÃO existe no pedido, desaja alterar o EAN do produto no pedido?'
+                this.message = 'Produto NÃO existe no pedido, o que deseja fazer?'
                 this.notFound = true
             }
 
@@ -188,7 +231,7 @@ new Vue({
                 this.message = 'O pedido está completo'
                 this.endTime = Date.now()
                 if (!this.finished) {
-                    this.updateSpreadSheet(this.order)
+                    await this.updateSpreadSheet(this.order)
                 }
                 this.finished = true
             }
