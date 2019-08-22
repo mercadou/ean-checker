@@ -38,7 +38,7 @@ new Vue({
 
     headers: ['ean','descricao', 'quantidade', 'encontrados', 'mercado'],
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
-    countBeeps: 10,
+    countBeeps: 0,
 
     async mounted() {
         await this.$GoogleAPI.ClientLoad()
@@ -164,6 +164,9 @@ new Vue({
                     this.spreadsheet = response.result
                     this.beeping = true
                     this.startTime = Date.now()
+                    window.onbeforeunload = function() {
+                        return true;
+                    }
                 } catch (error) {
                     console.log(error)
                 }
