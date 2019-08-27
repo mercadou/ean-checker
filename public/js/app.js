@@ -13,8 +13,10 @@ const strings = {
 
 new Vue({
     el: '#app',
+    vuetify: new Vuetify(),
     data: () => {
         return {
+            eanInput: '',
             beeping: false,
             selectedUser: '',
             selectedMarket: 'MR',
@@ -31,6 +33,8 @@ new Vue({
             addingSimilar: false,
             similarDescription: '',
             loading: false,
+            scrollTop: 0,
+            snackbar: { status: false, message: '' }
         }
     },
 
@@ -48,7 +52,14 @@ new Vue({
         }
     },
 
-    headers: ['ean','descricao', 'categoria', 'quantidade', 'encontrados', 'mercado','pedido'],
+    headers: [
+        { text: strings.ean, sortable: false, value: strings.ean, },
+        { text: strings.description, sortable: false, value: strings.description },
+        { text: strings.category, value: strings.category },
+        { text: strings.amount, sortable: false, value: strings.amount },
+        { text: strings.found, sortable: false, value: strings.found},
+        { text: strings.market, sortable: false, value: strings.market },
+    ],
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
     users: ['Maykon', 'Jorge'],
     spreadsheet: {
@@ -56,6 +67,10 @@ new Vue({
         name: 'Teste'
     },
     ...strings,
+
+    created () {
+        this.$vuetify.theme.dark = true
+    },
 
     async mounted() {
         await this.$GoogleAPI.ClientLoad()
@@ -67,10 +82,19 @@ new Vue({
         if (!this.isSignedIn) {
             this.$GoogleAPI.api.auth2.getAuthInstance().signIn()
         }
-
+        document.addEventListener('scroll', (event) => {
+            this.scrollTop = event.target.documentElement.scrollTop
+        })
     },
 
     methods: {
+        showSnackbar(message, color, timeout) {
+            this.snackbar.message = message
+            this.snackbar.color = color
+            this.snackbar.timeout = timeout
+            this.snackbar.status = true
+        },
+
         createSpreadSheet (title) {
             return this.$GoogleAPI.api.client.sheets.spreadsheets.create({
                 properties: {
@@ -147,7 +171,7 @@ new Vue({
                                 product[strings.eanChanged] = true
                                 product.updated = true
                             } else {
-                                alert('ERRO: Esse produto não pode ser mais alterado!')
+                                this.showSnackbar('ERRO: Esse produto não pode ser mais alterado!', 'error')
                             }
                         }
                         return product
@@ -157,7 +181,7 @@ new Vue({
                     this.message = 'Ean alterado com sucesso, veja o resultado na tabela, bipe o próximo produto!'
                 }
             } else {
-                alert('Por favor selecione um ean na tabela')
+                this.showSnackbar('Por favor selecione um ean na tabela', 'info')
             }
         },
 
@@ -178,12 +202,12 @@ new Vue({
                     })
                     this.addingSimilar = false
                     this.notFound = false
-                    this.message = 'Produto similar adicionado com sucesso, veja o resultado na tabela, bipe o próximo produto!'
+                    this.showSnackbar('Produto similar adicionado com sucesso, veja o resultado na tabela, bipe o próximo produto!','success')
                 }
             } else if (!this.oldEan) {
-                alert('Por favor selecione um ean na tabela')
+                this.showSnackbar('Por favor selecione um ean na tabela', 'info')
             } else {
-                alert('Por favor informa uma descrição válida (Mínimo de 10 caracteres)')
+                this.showSnackbar('Por favor informa uma descrição válida (Mínimo de 10 caracteres)', 'orange')
             }
         },
 
@@ -210,10 +234,11 @@ new Vue({
                 }
             })
             
-            return jsonOrder.map(product => {
+            return jsonOrder.map((product, index) => {
                 product[strings.amount] = Number(product[strings.amount] || '')
                 product[strings.found] = Number(product[strings.found] || '')
                 product[strings.orderNumber] = Number(product[strings.orderNumber] || '')
+                product.hasCopy = jsonOrder.filter(p => p[strings.ean] === product[strings.ean]).length > 1
                 return product
             })
         },
@@ -231,14 +256,21 @@ new Vue({
             }
         },
 
+        cancel () {
+            this.addingSimilar = false
+            this.editingEan = false
+            this.notFound = false
+            this.message = ''
+        },
+
         checkEanInput (event) {
             const eaninput = Number(event.target.value)
-            event.target.value = ''
+            this.eanInput = ''
             if (!Number.isNaN(eaninput) && eaninput !== 0) {
                 this.newEan = eaninput
                 this.checkEanInOrder(eaninput)
             } else {
-                alert('Por favor digite um EAN válido')
+                this.showSnackbar('Por favor digite um EAN válido', 'orange')
             }
         },
 
@@ -271,8 +303,8 @@ new Vue({
                                 this.message += ', quantidade completa, bipe o próximo produto'
                             }
                         } else if (Number(product[strings.ean])  == ean && product[strings.market] !== market && !product.hasCopy) {
-                            const productCopy = Object.assign({}, product)
                             product.hasCopy = true
+                            const productCopy = Object.assign({}, product)
                             productCopy [strings.amount] = product [strings.amount] - product[strings.found]
                             product[strings.amount] = product[strings.found]
                             productCopy[strings.found] = 1
@@ -285,7 +317,7 @@ new Vue({
                     })
                     this.order = newOrder
                 } else {
-                    alert('Esse produto não existe no seu pedido!')
+                    this.showSnackbar('Esse produto não existe no seu pedido!', 'orange')
                 }
             } else {
                 this.message = 'Produto NÃO existe no pedido, o que deseja fazer?'
@@ -293,7 +325,7 @@ new Vue({
             }
 
             if (this.order.every(p => Number(p[strings.amount]) == p[strings.found])) {
-                this.message = 'O pedido está completo'
+                this.showSnackbar = ('O pedido está completo','success')
                 this.endTime = Date.now()
                 if (!this.finished) {
                     await this.updateSpreadSheet(this.order)
