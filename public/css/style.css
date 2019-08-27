@@ -13,3 +13,7 @@ td.ean-table {
     cursor: pointer;
     user-select: none;
 }
+
+.beeping {
+    background-color: yellow;
+}

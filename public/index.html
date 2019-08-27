@@ -14,20 +14,20 @@
     <div id="app">
         <h1>Checador de pedidos</h1>
         <div class="container">
-            Selecione o Mercado
-            <select v-model="selectedMarket" name="select">
-                <option :value="0">MR</option>
-                <option :value="1">Extra</option>
-                <option :value="2">Atacadão</option>
-                <option :value="3">Guanabara</option>
+            Selecione o operador
+            <select v-model="selectedUser" name="select">
+                <option v-for="user in $options.users" :value="user" v-text="user"></option>
             </select>
-            <div v-if="!beeping">
-                Selecione csv do pedido
-                <input @change="getOrder" type="file" accept=".csv" />
-                <br>
-                <button @click="checkInputs">Confirmar</button>
+            <div v-if="selectedUser">
+                Selecione o Mercado
+                <select v-model="selectedMarket" name="select">
+                    <option v-for="market in $options.markets" :value="market" v-text="market"></option>
+                </select>
             </div>
-            <div v-else>
+            <div v-if="selectedUser && !beeping">
+                <button @click="checkInputs">Começar</button>
+            </div>
+            <div v-if="beeping">
                 Checar EAN no pedido
                 <input v-if="!finished" @keyup.enter="checkEanInput" type="text">
                 <br>
@@ -71,12 +71,20 @@
                         <th v-for="header in $options.headers" v-text="header"></th>
                     </thead>
                     <tbody>
-                        <tr v-for="product in order">
-                            <td @click="getEanFromTable" class="ean-table" v-text="product.ean"></td>
-                            <td v-text="product.descricao"></td>
-                            <td v-text="product.quantidade"></td>
-                            <td v-text="product.found || 0"></td>
-                            <td v-text="product.market || ''"></td>
+                        <tr
+                            v-for="product in order"
+                            v-if="
+                                product[$options.amount] !== product[$options.found] &&
+                                selectedUser === product[$options.user]"
+                            :class="{ beeping: product[$options.found] > 0 }"
+                        >
+                            <td @click="getEanFromTable" class="ean-table" v-text="product[$options.ean]"></td>
+                            <td v-text="product[$options.description]"></td>
+                            <td v-text="product[$options.category]"></td>
+                            <td v-text="product[$options.amount]"></td>
+                            <td v-text="product[$options.found]"></td>
+                            <td v-text="product[$options.market] || ''"></td>
+                            <td v-text="product[$options.orderNumber]"></td>
                         </tr>
                     </tbody>
                 </table>
