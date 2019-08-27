@@ -5,83 +5,185 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
-    <script src="https://cdn.rawgit.com/Keyang/node-csvtojson/d41f44aa/browser/csvtojson.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/json2csv"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <title>Checador de Pedido</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@3.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-        <h1>Checador de pedidos</h1>
-        <div class="container">
-            Selecione o Mercado
-            <select v-model="selectedMarket" name="select">
-                <option :value="0">MR</option>
-                <option :value="1">Extra</option>
-                <option :value="2">Atacadão</option>
-                <option :value="3">Guanabara</option>
-            </select>
-            <div v-if="!beeping">
-                Selecione csv do pedido
-                <input @change="getOrder" type="file" accept=".csv" />
-                <br>
-                <button @click="checkInputs">Confirmar</button>
+        <v-app>
+            <h1>Checador de pedidos</h1>
+            <div class="container">
+                <div class="">
+                    <v-select
+                        v-model="selectedUser"
+                        :items="$options.users"
+                        label="Selecione o separador"
+                    ></v-select>
+                </div>
+                <div v-if="selectedUser">
+                    <v-select
+                        v-model="selectedMarket"
+                        :items="$options.markets"
+                        label="Selecione o Mercado"
+                    ></v-select>
+                </div>
+                <div v-if="selectedUser && !beeping">
+                    <v-btn
+                        @click="checkInputs"
+                        color="success"
+                        class="mt-4"
+                        rounded
+                    >Começar</v-btn>
+                </div>
+                <div v-if="beeping">
+                    <div :class="{ ontop: scrollTop > 150 }">
+                        <div v-if="!finished">
+                            <v-text-field
+                                v-model="eanInput"
+                                @keyup.enter="checkEanInput"
+                                label="Checar EAN no pedido"
+                                required
+                            ></v-text-field>
+                        </div>
+    
+                        <span v-if="!editingEan && !addingSimilar" v-text="message"></span>
+                        <div v-if="notFound && !editingEan && !addingSimilar">
+                            <v-btn
+                            @click="startEditingEan"
+                            color="warning"
+                            class="mt-4"
+                            rounded
+                            >Trocar EAN</v-btn>
+                            ou
+                            <v-btn
+                            @click="addSimilar"
+                            color="warning"
+                            class="mt-4"
+                            rounded
+                            >Incluir Similar</v-btn>
+                        </div>
+    
+                        <div v-if="editingEan">
+                            <span>Clique na tabela no ean a ser alterado</span>
+    
+                            <div class="">
+                                <v-text-field
+                                    v-model="newEan"
+                                    label="Ean Correto"
+                                    disabled
+                                ></v-text-field>
+                            </div>
+    
+                            <div class="">
+                                <v-text-field
+                                    v-model="oldEan"
+                                    label="Ean a ser alterado"
+                                    disabled
+                                ></v-text-field>
+                            </div>
+                            <v-btn
+                                @click="changeProductEan"
+                                color="success"
+                                class="mt-4"
+                                rounded
+                            >Confirmar Alteração de EAN</v-btn>
+                            <v-btn
+                                @click="cancel"
+                                color="warning"
+                                class="mt-4"
+                                rounded
+                            >Cancelar Alteração de EAN</v-btn>
+                        </div>
+                        <div v-else-if="addingSimilar">
+                            <span>Clique na tabela no EAN similar</span>
+    
+                            <div class="">
+                                <v-text-field
+                                    v-model="newEan"
+                                    label="Similar"
+                                    disabled
+                                ></v-text-field>
+                            </div>
+    
+                            <div class="">
+                                <v-text-field
+                                    v-model="similarDescription"
+                                    label="Descrição do similar"
+                                    required
+                                ></v-text-field>
+                            </div>
+    
+                            <div class="">
+                                <v-text-field
+                                    v-model="oldEan"
+                                    label="Produto"
+                                    disabled
+                                ></v-text-field>
+                            </div>
+                            <v-btn
+                                @click="confirmSimilar"
+                                color="success"
+                                class="mt-4"
+                                rounded
+                            >Confirmar Adição de Similar</v-btn>
+                            <v-btn
+                                @click="cancel"
+                                color="warning"
+                                class="mt-4"
+                                rounded
+                            >Cancelar Adição de Similar</v-btn>
+                        </div>
+                    </div>
+    
+                    <v-data-table
+                        :headers="$options.headers"
+                        :items="order"
+                        :items-per-page="order.length"
+                        class="elevation-12 mt-4"
+                        fixed-header
+                    >
+                        <template v-slot:body>
+                            <tbody>
+                                <tr
+                                    v-for="product in order"
+                                    v-if="
+                                        product[$options.amount] !== product[$options.found] &&
+                                        selectedUser === product[$options.user]"
+                                    :class="{ beeping: product[$options.found] > 0 }"
+                                >
+                                    <td @click="getEanFromTable" class="ean-table" v-text="product[$options.ean]"></td>
+                                    <td v-text="product[$options.description]"></td>
+                                    <td v-text="product[$options.category]"></td>
+                                    <td v-text="product[$options.amount]"></td>
+                                    <td v-text="product[$options.found]"></td>
+                                    <td v-text="product[$options.market] || ''"></td>
+                                    <td v-text="product[$options.orderNumber]"></td>
+                                </tr>
+                            </tbody>
+                        </template>
+                    </v-data-table>
+                </div>
             </div>
-            <div v-else>
-                Checar EAN no pedido
-                <input v-if="!finished" @keyup.enter="checkEanInput" type="text">
-                <br>
-                <span v-if="!editingEan && !addingSimilar" v-text="message"></span>
-                <div v-if="notFound && !editingEan && !addingSimilar">
-                    <button @click="startEditingEan" >Trocar EAN</button>
-                    ou
-                    <button @click="addSimilar" >Incluir Similar</button>
-                </div>
-
-                <div v-if="editingEan">
-                    <span>Clique na tabela no ean a ser alterado</span>
-                    <br>
-                    Ean Correto
-                    <input :value="newEan" type="text" disabled>
-                    <br>
-                    Ean a ser alterado
-                    <input :value="oldEan" type="text" disabled>
-                    <br>
-                    <button @click="changeProductEan">Confirmar Alteração de EAN</button>
-                    <button @click="editingEan = false">Cancelar Alteração de EAN</button>
-                </div>
-                <div v-else-if="addingSimilar">
-                    <span>Clique na tabela no EAN similar</span>
-                    <br>
-                    Similar
-                    <input :value="newEan" type="text" disabled>
-                    <br>
-                    Descrição do similar
-                    <input type="text" v-model="similarDescription">
-                    <br>
-                    Produto
-                    <input :value="oldEan" type="text" disabled>
-                    <br>
-                    <button @click="confirmSimilar">Confirmar Adição de Similar</button>
-                    <button @click="addingSimilar = false">Cancelar Adição de Similar</button>
-                </div>
-
-                <table>
-                    <thead>
-                        <th v-for="header in $options.headers" v-text="header"></th>
-                    </thead>
-                    <tbody>
-                        <tr v-for="product in order">
-                            <td @click="getEanFromTable" class="ean-table" v-text="product.ean"></td>
-                            <td v-text="product.descricao"></td>
-                            <td v-text="product.quantidade"></td>
-                            <td v-text="product.found || 0"></td>
-                            <td v-text="product.market || ''"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <v-snackbar
+                v-model="snackbar.status"
+                :color="snackbar.color || 'primary'"
+                :timeout="snackbar.timeout || 4000"
+                top
+                >
+                {{ snackbar.message }}
+                <v-btn
+                    dark
+                    text
+                    @click="snackbar.status = false"
+                >
+                    Fechar
+                </v-btn>
+            </v-snackbar>
+        </v-app>
     </div>
 
     <script src="https://apis.google.com/js/api.js"></script>

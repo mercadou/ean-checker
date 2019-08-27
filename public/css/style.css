@@ -2,14 +2,21 @@ h1 {
     text-align: center;
 }
 
-table {
-    border: 2px black solid;
-}
-table td, table th {
-    padding: 5px;
-    border: 1px black solid;
-}
 td.ean-table {
     cursor: pointer;
     user-select: none;
+}
+
+.beeping {
+    background-color: orange;
+    color: black;
+}
+
+.ontop {
+    position: fixed;
+    background-color: #252525;
+    padding: 10px;
+    width: 100%;
+    top: 0;
+    left: 0;
 }
