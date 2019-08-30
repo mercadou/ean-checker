@@ -63,8 +63,8 @@ new Vue({
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
     users: ['Maykon', 'Jorge'],
     spreadsheet: {
-        spreadsheetId: '1fMt8QRD7zVYaDR9pCKUw-ox43B1hNAMWjX_cLOKTUv4',
-        name: 'Teste'
+        spreadsheetId: '1wMkPQ4iR29xWIlPAsovU4zsKm0Wh6JNvIrJvdN_mSAk',
+        name: 'teste'
     },
     ...strings,
 
