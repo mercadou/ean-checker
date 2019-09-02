@@ -58,13 +58,18 @@
                             class="mt-4"
                             rounded
                             >Trocar EAN</v-btn>
-                            ou
                             <v-btn
                             @click="addSimilar"
                             color="warning"
                             class="mt-4"
                             rounded
                             >Incluir Similar</v-btn>
+                            <v-btn
+                            @click="cancel"
+                            color="warning"
+                            class="mt-4"
+                            rounded
+                            >Cancelar</v-btn>
                         </div>
     
                         <div v-if="editingEan">
