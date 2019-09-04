@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.0.11/dist/vuetify.min.js"></script>
     <title>Checador de Pedido</title>
     <link rel="stylesheet" href="/css/style.css">
     <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
@@ -54,17 +54,22 @@
                         <div v-if="notFound && !editingEan && !addingSimilar">
                             <v-btn
                             @click="startEditingEan"
-                            color="warning"
+                            color="success"
                             class="mt-4"
                             rounded
                             >Trocar EAN</v-btn>
-                            ou
                             <v-btn
                             @click="addSimilar"
-                            color="warning"
+                            color="success"
                             class="mt-4"
                             rounded
                             >Incluir Similar</v-btn>
+                            <v-btn
+                            @click="cancel"
+                            color="warning"
+                            class="mt-4"
+                            rounded
+                            >Cancelar</v-btn>
                         </div>
     
                         <div v-if="editingEan">
@@ -140,32 +145,30 @@
                     </div>
     
                     <v-data-table
-                        :headers="$options.headers"
-                        :items="order"
-                        :items-per-page="order.length"
-                        class="elevation-12 mt-4"
-                        fixed-header
-                    >
-                        <template v-slot:body>
-                            <tbody>
-                                <tr
-                                    v-for="product in order"
-                                    v-if="
-                                        product[$options.amount] !== product[$options.found] &&
-                                        selectedUser === product[$options.user]"
-                                    :class="{ beeping: product[$options.found] > 0 }"
-                                >
-                                    <td @click="getEanFromTable" class="ean-table" v-text="product[$options.ean]"></td>
-                                    <td v-text="product[$options.description]"></td>
-                                    <td v-text="product[$options.category]"></td>
-                                    <td v-text="product[$options.amount]"></td>
-                                    <td v-text="product[$options.found]"></td>
-                                    <td v-text="product[$options.market] || ''"></td>
-                                    <td v-text="product[$options.orderNumber]"></td>
-                                </tr>
-                            </tbody>
-                        </template>
-                    </v-data-table>
+                    :headers="$options.headers"
+                    :items="order"
+                    :items-per-page="order.length"
+                    class="elevation-12 mt-4"
+                    fixed-header
+                >
+                    <template v-slot:body>
+                        <tbody>
+                            <tr
+                                v-for="product in order"
+                                v-if="
+                                    product[$options.amount] !== product[$options.found] &&
+                                    selectedUser === product[$options.user]"
+                                :class="{ beeping: product[$options.found] > 0 }"
+                            >
+                                <td @click="getEanFromTable" class="ean-table" v-text="product[$options.ean]"></td>
+                                <td v-text="product[$options.description]"></td>
+                                <td v-text="product[$options.category]"></td>
+                                <td v-text="product[$options.amount]"></td>
+                                <td v-text="product[$options.found]"></td>
+                            </tr>
+                        </tbody>
+                    </template>
+                </v-data-table>
                 </div>
             </div>
             <v-snackbar
