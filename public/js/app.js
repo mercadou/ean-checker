@@ -58,7 +58,6 @@ new Vue({
         { text: strings.category, value: strings.category },
         { text: strings.amount, sortable: false, value: strings.amount },
         { text: strings.found, sortable: false, value: strings.found},
-        { text: strings.market, sortable: false, value: strings.market },
     ],
     markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
     users: ['Maykon', 'Jorge'],
@@ -280,47 +279,71 @@ new Vue({
 
         async checkEanInOrder (ean) {
             if (this.order.some(p => Number(p[strings.ean]) == ean)) { //.some -> para algum
-                const produtoAchado = this.order.find(p => Number(p[strings.ean]) == ean)
-                if (this.selectedUser === produtoAchado[strings.user]) { // DEVER DE CASA
-                    const newOrder = []
-                    this.order.forEach(product => { //.forEach -> para cada
-                        const market = this.selectedMarket
-
-                        if (`${product[strings.ean]}-${product[strings.market] || market}` == `${ean}-${market}`) {
-                            this.message = `Produto "${product[strings.description]}" encontrado` //textContent -> Insere texto
-                            if (!product[strings.found]) {
-                                product[strings.found] = 0
-                            }
-                            if (product[strings.amount] > product[strings.found]) {
-
-                                if (!product[strings.market]) {
-                                    product[strings.market] = market
-                                }
-                                product[strings.found] += 1
-                                product.updated = true
-                                this.message += ` Falta(m) bipar ${Number(product[strings.amount]) - product[strings.found]} produto(s)`
-                            } else {
-                                this.message += ', quantidade completa, bipe o próximo produto'
-                            }
-                        } else if (Number(product[strings.ean])  == ean && product[strings.market] !== market && !product.hasCopy) {
-                            product.hasCopy = true
-                            const productCopy = Object.assign({}, product)
-                            productCopy [strings.amount] = product [strings.amount] - product[strings.found]
-                            product[strings.amount] = product[strings.found]
-                            productCopy[strings.found] = 1
-                            product.updated = true
-                            productCopy.updated = true
-                            productCopy[strings.market] = market
-                            newOrder.push(productCopy)
+                const productFound = this.order.find(p => Number(p[strings.ean]) == ean)
+                const newOrder = []
+                if (this.selectedUser === productFound[strings.user]) {
+                    const market = this.selectedMarket
+                    this.message = `Produto "${productFound[strings.description]}" encontrado` //textContent -> Insere texto
+                    const eanAmount = this.order.filter(p => p[strings.ean]== ean)
+                    if (eanAmount.length == 1){
+                        if (!productFound[strings.found]) {
+                            productFound[strings.found] = 0
                         }
-                        newOrder.push(product) //.append = .push
+                        if (productFound[strings.amount] > productFound[strings.found]) {
+                            if (!productFound[strings.market]) {
+                                productFound[strings.market] = market
+                            }
+                            productFound[strings.found] += 1
+                            productFound.updated = true
+                            this.message += ` Falta(m) bipar ${Number(productFound[strings.amount]) - productFound[strings.found]} produto(s)`
+                        } else {
+                            this.message += ', quantidade completa, bipe o próximo produto'
+                        }
+                    }else if (eanAmount.length > 1){
+                        const pr = eanAmount.find(pr => pr[strings.found]<pr[strings.amount])
+                        if (!pr[strings.found]) {
+                            pr[strings.found] = 0
+                        }
+                        if (pr[strings.amount] > pr[strings.found]) {
+                            if (!pr[strings.market]) {
+                                pr[strings.market] = market
+                            }
+                            pr[strings.found] += 1
+                            pr.updated = true 
+                            const contAmount=  eanAmount.reduce((acumulador, item) => {
+                                return acumulador + Number(item[strings.amount])
+                                },0)
+                            const contFound=  eanAmount.reduce((acumulador, item) => {
+                                return acumulador + Number(item[strings.found])
+                                },0)
+                            this.message += ` Falta(m) bipar ${contAmount - contFound} produto(s)`  
+                        } else {
+                                this.message += ', quantidade completa, bipe o próximo produto'
+                        }
+                            
+                    } else if (Number(productFound[strings.ean])  == ean && productFound[strings.market] !== market && !productFound.hasCopy) {
+                        productFound.hasCopy = true
+                        const productCopy = Object.assign({}, productFound)
+                        productCopy [strings.amount] = productFound [strings.amount] - productFound[strings.found]
+                        productFound[strings.amount] = productFound[strings.found]
+                        productCopy[strings.found] = 1
+                        productFound.updated = true
+                        productCopy.updated = true
+                        productCopy[strings.market] = market
+                        newOrder.push(productCopy)
+                    }
+                    this.order.forEach(p => {
+                        if (p[strings.ean] == productFound[strings.ean] && p[strings.orderNumber] == productFound[strings.orderNumber]){
+                            newOrder.push(productFound)
+                        }else{
+                            newOrder.push(p)
+                        }
                     })
-                    this.order = newOrder
-                } else {
-                    this.showSnackbar('Esse produto não existe no seu pedido!', 'orange')
                 }
+                this.order = newOrder
             } else {
                 this.message = 'Produto NÃO existe no pedido, o que deseja fazer?'
+                this.showSnackbar('Esse produto não existe no seu pedido!', 'orange')
                 this.notFound = true
             }
 
