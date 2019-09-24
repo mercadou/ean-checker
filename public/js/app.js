@@ -59,8 +59,8 @@ new Vue({
         { text: strings.amount, sortable: false, value: strings.amount },
         { text: strings.found, sortable: false, value: strings.found},
     ],
-    markets: ['MR', 'Extra', 'Atacadão', 'Guanabara'],
-    users: ['Maykon', 'Jorge'],
+    markets: ['MR', 'Extra', 'Carrefour', 'Guanabara'],
+    users: ['Separador 1', 'Separador 2', 'Treinamento'],
     spreadsheet: {
         spreadsheetId: '1fMt8QRD7zVYaDR9pCKUw-ox43B1hNAMWjX_cLOKTUv4',
         name: 'Teste'
