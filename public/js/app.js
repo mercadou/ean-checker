@@ -8,7 +8,8 @@ const strings = {
     found: 'Encontrado',
     market: 'Mercado',
     eanChanged: 'Trocado',
-    similar: 'Similar de'
+    similar: 'Similar de',
+    hour: 'Hora' 
 }
 
 new Vue({
@@ -131,7 +132,8 @@ new Vue({
                             product[strings.found] || 0,
                             product[strings.market] || '',
                             product[strings.eanChanged] || false,
-                            product[strings.similar] || ''
+                            product[strings.similar] || '',
+                            product[strings.hour] || ''
                         ]
                     }
                     return []
@@ -230,6 +232,7 @@ new Vue({
                     [headers[7]]: product[7],
                     [headers[8]]: product[8],
                     [headers[9]]: product[9],
+                    [headers[10]]: product[10]
                 }
             })
             
@@ -294,6 +297,7 @@ new Vue({
                                 productFound[strings.market] = market
                             }
                             productFound[strings.found] += 1
+                            productFound[strings.hour] = Date(Date.now())
                             productFound.updated = true
                             this.message += ` Falta(m) bipar ${Number(productFound[strings.amount]) - productFound[strings.found]} produto(s)`
                         } else {
